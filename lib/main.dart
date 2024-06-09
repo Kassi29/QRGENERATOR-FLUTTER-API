@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-//import 'package:http/http.dart' as http;
+import 'package:http/http.dart' as http;
+//import 'package:connectivity/connectivity.dart';
 
 void main() => runApp(const MyApp());
 
@@ -29,11 +30,12 @@ class Inicio extends StatefulWidget {
 
 String? finalTipo = 'URL';
 String? finalShape = 'square';
-String? finalColor = 'Rojo';
+String? finalColor = '#FF0000';
 String? finalFormato = 'png';
 String? finalData = '';
 final data = TextEditingController();
-String url = "https://api.qrcode-monkey.com/qr/custom";
+Map<String, dynamic>? payload;
+Uri url = Uri.parse("https://api.qrcode-monkey.com/qr/custom");
 
 class _InicioState extends State<Inicio> {
   @override
@@ -81,9 +83,9 @@ class _InicioState extends State<Inicio> {
           ColorSelector(
             onColorSelected: (String? color) {
               setState(() {
-                finalColor = color;
+                finalColor = _convertirColorHex(color);
               });
-              print('Valor seleccionado para Color: $color');
+              print('Valor seleccionado para Color: $finalColor');
             },
           ),
           Formato(
@@ -104,7 +106,15 @@ class _InicioState extends State<Inicio> {
               onPressed: () {
                 finalData = data.text;
                 if (finalData?.isNotEmpty ?? false) {
-                  crearJSON();
+                   crearJSON();
+                 // verificarConexionInternet().then((conectado) {
+                 //   if (conectado) {
+                //     print('Hay conexión a Internet.');
+                //   //} else {
+                //      print('No hay conexión a Internet.');
+                 //   }
+                 // });
+                  enviarSolicitud();
                 } else {
                   print('El texto no puede estar vacío.');
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -124,6 +134,22 @@ class _InicioState extends State<Inicio> {
         ],
       ),
     );
+  }
+}
+String _convertirColorHex(String? nombreColor) {
+  print('Color recibido: $nombreColor');
+  switch (nombreColor) {
+    case 'Rojo':
+      return '#FF0000';
+    case 'Azul':
+      return '#0000FF';
+    case 'Verde':
+      return '#00FF00';
+    case 'Negro':
+      return '#000000';
+    default:
+      // Si el color no se encuentra en la lista, puedes devolver un valor predeterminado o lanzar una excepción
+      return '#000000'; // Color blanco como valor predeterminado
   }
 }
 
@@ -152,12 +178,12 @@ class Boton extends StatelessWidget {
 }
 
 void crearJSON() {
-  Map<String, dynamic> payload = {
+  payload = {
     "data": finalData,
     "config": {
       "body": finalShape,
-      "eye": "",
-      "eyeBall": "",
+      "eye": "frame0",
+      "eyeBall": "ball7",
       "bodyColor": "#000000",
       "bgColor": "#FFFFFF",
       "eye1Color": finalColor,
@@ -180,6 +206,40 @@ void crearJSON() {
   String jsonString = jsonEncode(payload);
 
   print(jsonString);
+}
+
+void enviarSolicitud() async {
+  try {
+    var response = await http.post(
+      url,
+      headers: {
+        HttpHeaders.contentTypeHeader: "application/json",
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 200) {
+      print("\n[+] Status : Éxito!!\n");
+
+      Map<String, dynamic> output = jsonDecode(response.body);
+      String link = output['imageUrl'];
+
+      print(link);
+    } else {
+      print("[-] Status : Error ${response.statusCode}");
+    }
+  } catch (e) {
+    print("[-] Error al realizar la solicitud: $e");
+  }
+}
+
+Future<bool> verificarConexionInternet() async {
+  try {
+    final response = await http.head(Uri.parse('http://www.google.com'));
+    return response.statusCode == 200;
+  } catch (e) {  
+    return false;
+  }
 }
 
 class Formato extends StatefulWidget {
@@ -346,15 +406,6 @@ class _FormaState extends State<Forma> {
       ],
     );
   }
-}
-
-class Colork extends StatefulWidget {
-  final Function(String?) onColorSelected;
-
-  const Colork({super.key, required this.onColorSelected});
-
-  @override
-  _FormaState createState() => _FormaState();
 }
 
 class ColorSelector extends StatefulWidget {
