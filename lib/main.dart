@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+//import 'package:http/http.dart' as http;
 
 void main() => runApp(const MyApp());
 
@@ -30,6 +33,7 @@ String? finalColor = 'Rojo';
 String? finalFormato = 'png';
 String? finalData = '';
 final data = TextEditingController();
+String url = "https://api.qrcode-monkey.com/qr/custom";
 
 class _InicioState extends State<Inicio> {
   @override
@@ -100,11 +104,19 @@ class _InicioState extends State<Inicio> {
               onPressed: () {
                 finalData = data.text;
                 if (finalData?.isNotEmpty ?? false) {
-                  imprimirContenido();
-                  // Aquí puedes realizar cualquier acción adicional si el texto no está vacío
+                  crearJSON();
                 } else {
                   print('El texto no puede estar vacío.');
-                  // Aquí puedes mostrar un mensaje de error al usuario indicando que el texto no puede estar vacío
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      duration: Duration(seconds: 2),
+                      backgroundColor: Colors.blue,
+                      content: Text(
+                        'El texto no puede estar vacío.',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  );
                 }
               },
             ),
@@ -139,12 +151,35 @@ class Boton extends StatelessWidget {
   }
 }
 
-void imprimirContenido() {
-  print('Tipo: $finalTipo');
-  print('Forma: $finalShape');
-  print('Color: $finalColor');
-  print('Formato: $finalFormato');
-  print('Data: $finalData');
+void crearJSON() {
+  Map<String, dynamic> payload = {
+    "data": finalData,
+    "config": {
+      "body": finalShape,
+      "eye": "",
+      "eyeBall": "",
+      "bodyColor": "#000000",
+      "bgColor": "#FFFFFF",
+      "eye1Color": finalColor,
+      "eye2Color": finalColor,
+      "eye3Color": finalColor,
+      "eyeBall1Color": finalColor,
+      "eyeBall2Color": finalColor,
+      "eyeBall3Color": finalColor,
+      "gradientColor1": finalColor,
+      "gradientColor2": finalColor,
+      "gradientType": "linear",
+      "gradientOnEyes": "true",
+    },
+    "size": 500,
+    "download": "imageUrl",
+    "file": finalFormato
+  };
+
+  // Convertir el mapa a JSON
+  String jsonString = jsonEncode(payload);
+
+  print(jsonString);
 }
 
 class Formato extends StatefulWidget {
