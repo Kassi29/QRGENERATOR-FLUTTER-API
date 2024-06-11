@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-
+import 'package:gallery_saver/gallery_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-//import 'package:connectivity/connectivity.dart';
+import 'package:path_provider/path_provider.dart';
 
 void main() => runApp(const MyApp());
 
@@ -69,7 +69,6 @@ class _InicioState extends State<Inicio> {
           TipoQR(onTipoSelected: (String? tipo) {
             setState(() {
               finalTipo = tipo;
-              print('Valor seleccionado para Color: $finalTipo');
             });
           }),
           Forma(
@@ -77,7 +76,6 @@ class _InicioState extends State<Inicio> {
               setState(() {
                 finalShape = forma;
               });
-              print('Valor seleccionado: $forma');
             },
           ),
           ColorSelector(
@@ -85,7 +83,6 @@ class _InicioState extends State<Inicio> {
               setState(() {
                 finalColor = _convertirColorHex(color);
               });
-              print('Valor seleccionado para Color: $finalColor');
             },
           ),
           Formato(
@@ -118,7 +115,7 @@ class _InicioState extends State<Inicio> {
                 } else {
                   print('El texto no puede estar vacío.');
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+                    const SnackBar(
                       duration: Duration(seconds: 2),
                       backgroundColor: Colors.blue,
                       content: Text(
@@ -148,8 +145,7 @@ String _convertirColorHex(String? nombreColor) {
     case 'Negro':
       return '#000000';
     default:
-      // Si el color no se encuentra en la lista, puedes devolver un valor predeterminado o lanzar una excepción
-      return '#000000'; // Color blanco como valor predeterminado
+      return '#000000'; 
   }
 }
 
@@ -202,7 +198,7 @@ void crearJSON() {
     "file": finalFormato
   };
 
-  // Convertir el mapa a JSON
+
   String jsonString = jsonEncode(payload);
 
   print(jsonString);
@@ -225,6 +221,7 @@ void enviarSolicitud() async {
       String link = output['imageUrl'];
 
       print(link);
+      await downloadFile(link, finalFormato!);
     } else {
       print("[-] Status : Error ${response.statusCode}");
     }
@@ -233,6 +230,32 @@ void enviarSolicitud() async {
   }
 }
 
+Future<void> downloadFile(String link, String format) async {
+  try {
+
+    final newLink = "http:" + link;
+    print(newLink);
+
+    final response = await http.get(Uri.parse(newLink));
+
+    if (response.statusCode == 200) {
+
+      final bytes = response.bodyBytes;
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$format';
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(bytes);
+
+
+      await GallerySaver.saveImage(file.path);
+
+    } else {
+      print("[-] Status : Error ${response.statusCode}");
+    }
+  } catch (e) {
+    print("[-] Error al descargar el archivo: $e");
+  }
+}
 Future<bool> verificarConexionInternet() async {
   try {
     final response = await http.head(Uri.parse('http://www.google.com'));
@@ -252,7 +275,7 @@ class Formato extends StatefulWidget {
 }
 
 class _FormatoState extends State<Formato> {
-  String? _selectedValue = 'png'; // Inicializar el valor seleccionado
+  String? _selectedValue = 'png'; 
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +297,7 @@ class _FormatoState extends State<Formato> {
               setState(() {
                 _selectedValue = newValue;
               });
-              widget.onFormatoSelected(newValue); // Llamar a la función externa
+              widget.onFormatoSelected(newValue); 
             },
             items: <String>['png', 'jpg', 'pdf']
                 .map<DropdownMenuItem<String>>((String value) {
@@ -322,7 +345,7 @@ class _TipoQRState extends State<TipoQR> {
               setState(() {
                 _selectedValue = newValue;
               });
-              widget.onTipoSelected(newValue); // Llamar a la función externa
+              widget.onTipoSelected(newValue); 
             },
             items: <String>['URL', 'Text Plain', 'Email', 'Phone']
                 .map<DropdownMenuItem<String>>((String value) {
