@@ -90,7 +90,6 @@ class _InicioState extends State<Inicio> {
               setState(() {
                 finalFormato = formato;
               });
-              print('Valor seleccionado para formato: $formato');
             },
           ),
           //DataQR
@@ -101,19 +100,11 @@ class _InicioState extends State<Inicio> {
           Center(
             child: Boton(
               onPressed: () {
-                finalData = data.text;
+                finalData = formatear(data.text);
                 if (finalData?.isNotEmpty ?? false) {
                    crearJSON();
-                 // verificarConexionInternet().then((conectado) {
-                 //   if (conectado) {
-                //     print('Hay conexión a Internet.');
-                //   //} else {
-                //      print('No hay conexión a Internet.');
-                 //   }
-                 // });
-                  enviarSolicitud();
+                  enviarSolicitud(context);
                 } else {
-                  print('El texto no puede estar vacío.');
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       duration: Duration(seconds: 2),
@@ -133,8 +124,20 @@ class _InicioState extends State<Inicio> {
     );
   }
 }
+
+String formatear(String data) {
+    switch (finalTipo) {
+      case 'URL':
+        return Uri.encodeFull(data);
+      case 'Email':
+        return 'mailto:$data';
+      case 'Phone':
+        return 'tel:$data';
+      default:
+        return data;
+    }
+  }
 String _convertirColorHex(String? nombreColor) {
-  print('Color recibido: $nombreColor');
   switch (nombreColor) {
     case 'Rojo':
       return '#FF0000';
@@ -199,12 +202,9 @@ void crearJSON() {
   };
 
 
-  String jsonString = jsonEncode(payload);
-
-  print(jsonString);
 }
 
-void enviarSolicitud() async {
+void enviarSolicitud(BuildContext context) async {
   try {
     var response = await http.post(
       url,
@@ -220,8 +220,8 @@ void enviarSolicitud() async {
       Map<String, dynamic> output = jsonDecode(response.body);
       String link = output['imageUrl'];
 
-      print(link);
-      await downloadFile(link, finalFormato!);
+
+      await descargar(link, finalFormato!,context);
     } else {
       print("[-] Status : Error ${response.statusCode}");
     }
@@ -230,11 +230,11 @@ void enviarSolicitud() async {
   }
 }
 
-Future<void> downloadFile(String link, String format) async {
+Future<void> descargar(String link, String format, BuildContext context ) async {
   try {
 
     final newLink = "http:" + link;
-    print(newLink);
+
 
     final response = await http.get(Uri.parse(newLink));
 
@@ -248,20 +248,22 @@ Future<void> downloadFile(String link, String format) async {
 
 
       await GallerySaver.saveImage(file.path);
+      ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      duration: Duration(seconds: 2),
+                      backgroundColor: Colors.blue,
+                      content: Text(
+                        'Descarga exitosa :).',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  );
 
     } else {
       print("[-] Status : Error ${response.statusCode}");
     }
   } catch (e) {
     print("[-] Error al descargar el archivo: $e");
-  }
-}
-Future<bool> verificarConexionInternet() async {
-  try {
-    final response = await http.head(Uri.parse('http://www.google.com'));
-    return response.statusCode == 200;
-  } catch (e) {  
-    return false;
   }
 }
 
@@ -323,8 +325,7 @@ class TipoQR extends StatefulWidget {
 }
 
 class _TipoQRState extends State<TipoQR> {
-  String? _selectedValue = 'URL'; // Inicializar el valor seleccionado
-
+  String? _selectedValue = 'URL'; 
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -391,9 +392,9 @@ class _FormaState extends State<Forma> {
             value: _selectedValue,
             onChanged: (String? newValue) {
               setState(() {
-                _selectedValue = newValue; // Actualizar el valor seleccionado
+                _selectedValue = newValue; 
               });
-              widget.onShapeSelected(newValue); // Llamar a la función externa
+              widget.onShapeSelected(newValue); 
             },
             items: <String>[
               'square',
